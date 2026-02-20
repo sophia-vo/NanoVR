@@ -5,7 +5,6 @@
 #include "Components/InputComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
-#include "ChatInputWidget.h"
 #include "Blueprint/UserWidget.h"
 
 
@@ -94,7 +93,7 @@ void AWalkieTalkieActor::OnPressE()
         // Hide 3D widget prompt
         PressEPromptWidget->SetVisibility(false);
 
-        // ShowChatInput();
+        ShowChatInput();
         
         if (GEngine)
         {
@@ -115,61 +114,61 @@ void AWalkieTalkieActor::OnPressE()
 
 // Text Box Handling --------------------------
 
-// void AWalkieTalkieActor::ShowChatInput()
-// {
-//     if (!ChatInputWidgetClass) 
-//     {
-//         UE_LOG(LogTemp, Warning, TEXT("ChatInputWidgetClass not set!"));
-//         return;
-//     }
+void AWalkieTalkieActor::ShowChatInput()
+{
+    if (!ChatInputWidgetClass) 
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ChatInputWidgetClass not set!"));
+        return;
+    }
 
-//     if (!ChatInputWidget)
-//     {
-//         ChatInputWidget = CreateWidget<UUserWidget>(
-//             GetWorld(),
-//             ChatInputWidgetClass
-//         );
+    if (!ChatInputWidget)
+    {
+        ChatInputWidget = CreateWidget<UUserWidget>(
+            GetWorld(),
+            ChatInputWidgetClass
+        );
 
-//         if (!ChatInputWidget)
-//         {
-//             UE_LOG(LogTemp, Warning, TEXT("Failed to create ChatInputWidget"));
-//             return;
-//         }
-//     }
+        if (!ChatInputWidget)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Failed to create ChatInputWidget"));
+            return;
+        }
+    }
 
-//     ChatInputWidget->AddToViewport(0);
+    ChatInputWidget->AddToViewport(0);
 
-//     if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
-//     {
-//         PC->bShowMouseCursor = true;
+    if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+    {
+        PC->bShowMouseCursor = true;
 
-//         FInputModeUIOnly InputMode;
-//         InputMode.SetWidgetToFocus(ChatInputWidget->TakeWidget());
-//         InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+        FInputModeUIOnly InputMode;
+        InputMode.SetWidgetToFocus(ChatInputWidget->TakeWidget());
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 
-//         PC->SetInputMode(InputMode);
-//     }
-// }
+        PC->SetInputMode(InputMode);
+    }
+}
 
-// void AWalkieTalkieActor::HideChatInput()
-// {
-//     if (ChatInputWidget && ChatInputWidget->IsInViewport())
-//     {
-//         ChatInputWidget->RemoveFromParent();
-//     }
+void AWalkieTalkieActor::HideChatInput()
+{
+    if (ChatInputWidget && ChatInputWidget->IsInViewport())
+    {
+        ChatInputWidget->RemoveFromParent();
+    }
 
-//     if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
-//     {
-//         PC->bShowMouseCursor = false;
-//         PC->SetInputMode(FInputModeGameOnly());
-//     }
-// }
+    if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
+    {
+        PC->bShowMouseCursor = false;
+        PC->SetInputMode(FInputModeGameOnly());
+    }
+}
 
-// void AWalkieTalkieActor::OnChatTextSubmitted(const FString& Text)
-// {
-//     HideChatInput();
+void AWalkieTalkieActor::OnChatTextSubmitted(const FString& Text)
+{
+    HideChatInput();
 
-//     UE_LOG(LogTemp, Log, TEXT("Chat text submitted: %s"), *Text);
+    UE_LOG(LogTemp, Log, TEXT("Chat text submitted: %s"), *Text);
 
-//     // Your API call or further processing here
-// }
+    // API call or further processing here
+}

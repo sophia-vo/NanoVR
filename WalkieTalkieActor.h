@@ -6,9 +6,10 @@
 #include "GameFramework/Actor.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
-#include "WalkieTalkieActor.generated.h"
 #include "Components/WidgetComponent.h"
 #include "Blueprint/UserWidget.h"
+#include "WalkieTalkieActor.generated.h"
+
 
 
 UCLASS()
@@ -19,8 +20,8 @@ class NANOTESTER3D_API AWalkieTalkieActor : public AActor
 public:
     AWalkieTalkieActor();
 
-    // UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
-    // TSubclassOf<UUserWidget> ChatInputWidgetClass;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+    TSubclassOf<UUserWidget> ChatInputWidgetClass;
  
 protected:
     virtual void BeginPlay() override;
@@ -55,14 +56,14 @@ protected:
     // UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
     // TSubclassOf<UUserWidget> ChatInputWidgetClass;
     
-    // UPROPERTY()
-    // UUserWidget* ChatInputWidget;
+    UPROPERTY()
+    UUserWidget* ChatInputWidget;
     
-    // // Function to handle submitted chat text
-    // UFUNCTION()
-    // void OnChatTextSubmitted(const FString& Text);
+    // Function to handle submitted chat text
+    UFUNCTION()
+    void OnChatTextSubmitted(const FString& Text);
     
-    // // Show/hide chat input UI
-    // void ShowChatInput();
-    // void HideChatInput();
+    // Show/hide chat input UI
+    void ShowChatInput();
+    void HideChatInput();
 };
