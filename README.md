@@ -25,17 +25,18 @@ Show the 2D chat input widget on screen.
 
 Note: 3D widget (PressEPromptWidget) is a world-space widget attached above the walkie talkie mesh.
 
-2. Blueprint inheriting from Walkie Talkie Actor C++ class - BP_WalkieTalkie
+2. Blueprint inheriting from Walkie Talkie Actor C++ class - BP_WalkieTalkie, PressEPromptWidget UI widget class assigned to WBP_PressE, In levelinstance, UI 
 3. Depreciated Add Input Action Mapping for “Interact” (E key) (Action Mappings, named 'Interact', Bind 'E' keyboard key
-Chat Input 2D UMG Widget
-Create lightweight UUserWidget blueprint (e.g., WBP_ChatInput):
-Contains an EditableTextBox aligned on left.
-Binds OnTextCommitted event (Enter detection).
-Expose OnTextSubmitted delegate or BlueprintImplementable event, callable from C++.
+4. WBP_PressE - Button -> Text (Press E to Interact)
+5. WBP_ChatInput - Canvas Panel -> Border -> Editable Text named InputTextBox
+   Event on InputTextBox: OnTextCommitted (Variables: Target - WBP Chat Input, InputTextBox - Editable Text Box Widget, Event Dispatchers: OnTextSubmitted)
+
 In C++:
 Hold a TSubclassOf<UUserWidget> ChatInputWidgetClass property.
 Create an instance (UUserWidget* ChatInputWidget) at runtime on demand.
 Add to viewport, set input mode UI only, and show cursor.
 On text submit:
 Pass the string input to WalkieTalkie actor method.
+
+
  
