@@ -1,2 +1,41 @@
 # NanoVR
 BP_WalkieTalkie
+
+1. C++ Class - WalkieTalkieActor.cpp and WalkieTalkieActor.h
+
+WalkieTalkie Actor (C++):
+Static Mesh: Visual 3D walkie talkie.
+Sphere Component (no mesh, collision only): Detection boundary around the walkie talkie.
+3D Widget Component: “Press E” prompt floating above walkie talkie (hidden by default).
+Overlap events enable/disable input interaction.
+On E key press, show a 2D chat input UI on screen.
+
+Components:
+UStaticMeshComponent* WalkieTalkieMesh; (assign your static mesh in Editor).
+USphereComponent* DetectionSphere; (collision only, no mesh).
+UWidgetComponent* PressEPromptWidget; (3D widget displaying “Press E”).
+
+Logic:
+Bind OnComponentBeginOverlap & OnComponentEndOverlap on DetectionSphere to detect player presence.
+Show/hide PressEPromptWidget accordingly.
+Enable/disable input for the player controller when inside detection.
+Bind to E key press:
+Hide the 3D prompt.
+Show the 2D chat input widget on screen.
+
+Note: 3D widget (PressEPromptWidget) is a world-space widget attached above the walkie talkie mesh.
+
+2. Blueprint inheriting from Walkie Talkie Actor C++ class - BP_WalkieTalkie
+3. Depreciated Add Input Action Mapping for “Interact” (E key) (Action Mappings, named 'Interact', Bind 'E' keyboard key
+Chat Input 2D UMG Widget
+Create lightweight UUserWidget blueprint (e.g., WBP_ChatInput):
+Contains an EditableTextBox aligned on left.
+Binds OnTextCommitted event (Enter detection).
+Expose OnTextSubmitted delegate or BlueprintImplementable event, callable from C++.
+In C++:
+Hold a TSubclassOf<UUserWidget> ChatInputWidgetClass property.
+Create an instance (UUserWidget* ChatInputWidget) at runtime on demand.
+Add to viewport, set input mode UI only, and show cursor.
+On text submit:
+Pass the string input to WalkieTalkie actor method.
+ 
