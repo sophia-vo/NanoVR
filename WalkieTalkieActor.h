@@ -8,9 +8,20 @@
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Blueprint/UserWidget.h"
+
+#include "HttpModule.h"
+#include "Interfaces/IHttpRequest.h"
+#include "Interfaces/IHttpResponse.h"
+
 #include "WalkieTalkieActor.generated.h"
 
-
+UENUM()
+enum class EChatState : uint8
+{
+    Normal,
+    RequestedQuiz,
+    WaitingForAnswer
+};
 
 UCLASS()
 class NANOTESTER3D_API AWalkieTalkieActor : public AActor
@@ -20,7 +31,7 @@ class NANOTESTER3D_API AWalkieTalkieActor : public AActor
 public:
     AWalkieTalkieActor();
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+    UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UUserWidget> ChatInputWidgetClass;
  
 protected:
@@ -53,17 +64,20 @@ protected:
     bool bPlayerInRange;
 
     // User Widget Text Box --------------------------------
-    // UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
-    // TSubclassOf<UUserWidget> ChatInputWidgetClass;
     
     UPROPERTY()
     UUserWidget* ChatInputWidget;
     
-    // Function to handle submitted chat text
-    UFUNCTION()
-    void OnChatTextSubmitted(const FString& Text);
-    
-    // Show/hide chat input UI
     void ShowChatInput();
+
+    UFUNCTION(BlueprintCallable, Category = "Walkie Talkie")
     void HideChatInput();
+
+    UFUNCTION(BlueprintCallable, Category = "Walkie Talkie")
+    void SubmitChatText(const FString& Text);
+
+    void OnChatAPIResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+
+    EChatState CurrentChatState = EChatState::Normal;
+    FString LastQuizQuestion;
 };

@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Blueprint/UserWidget.h"
+#include "Serialization/JsonSerializer.h"
 
 
 AWalkieTalkieActor::AWalkieTalkieActor()
@@ -86,28 +87,60 @@ void AWalkieTalkieActor::OnDetectionEndOverlap(UPrimitiveComponent* OverlappedCo
     }
 }
 
+// void AWalkieTalkieActor::OnPressE()
+// {
+//     if (bPlayerInRange)
+//     {
+//         // Hide 3D widget prompt
+//         PressEPromptWidget->SetVisibility(false);
+
+//         ShowChatInput();
+        
+//         if (GEngine)
+//         {
+//             GEngine->AddOnScreenDebugMessage(
+//                 -1,                 // Key (-1 = new message every time)
+//                 5.f,                // Duration (seconds)
+//                 FColor::Green,      // Text color
+//                 TEXT("E pressed: Show chat input UI")
+//             );
+//         }
+
+//         // Show 2D chat input UI (widget on left screen) here via your UUserWidget class
+    
+//         UE_LOG(LogTemp, Log, TEXT("E pressed: Show chat input UI"));
+//     }
+// }
+
 void AWalkieTalkieActor::OnPressE()
 {
     if (bPlayerInRange)
     {
-        // Hide 3D widget prompt
-        PressEPromptWidget->SetVisibility(false);
+        // Check if the chat widget is currently visible on the screen
+        if (ChatInputWidget && ChatInputWidget->IsInViewport())
+    {
+            // The user wants to exit the chat
+            HideChatInput();
 
-        ShowChatInput();
-        
-        if (GEngine)
-        {
-            GEngine->AddOnScreenDebugMessage(
-                -1,                 // Key (-1 = new message every time)
-                5.f,                // Duration (seconds)
-                FColor::Green,      // Text color
-                TEXT("E pressed: Show chat input UI")
-            );
+            // Bring the 3D prompt back
+            if (PressEPromptWidget)
+            {
+                PressEPromptWidget->SetVisibility(true);
+            }
+
+            // Optional: Reset the state machine in case they walked away mid-quiz
+            CurrentChatState = EChatState::Normal; 
         }
-
-        // TODO: Show 2D chat input UI (widget on left screen) here via your UUserWidget class
-    
-        UE_LOG(LogTemp, Log, TEXT("E pressed: Show chat input UI"));
+        else
+        {
+            // The user wants to start chatting
+            if (PressEPromptWidget)
+            {
+                PressEPromptWidget->SetVisibility(false);
+            }
+            
+            ShowChatInput();
+        }
     }
 }
 
@@ -124,10 +157,7 @@ void AWalkieTalkieActor::ShowChatInput()
 
     if (!ChatInputWidget)
     {
-        ChatInputWidget = CreateWidget<UUserWidget>(
-            GetWorld(),
-            ChatInputWidgetClass
-        );
+        ChatInputWidget = CreateWidget<UUserWidget>(GetWorld(), ChatInputWidgetClass);
 
         if (!ChatInputWidget)
         {
@@ -136,15 +166,21 @@ void AWalkieTalkieActor::ShowChatInput()
         }
     }
 
-    ChatInputWidget->AddToViewport(0);
+    if (!ChatInputWidget->IsInViewport())
+    {
+        ChatInputWidget->AddToViewport(0);
+    }
 
     if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
     {
         PC->bShowMouseCursor = true;
 
-        FInputModeUIOnly InputMode;
+        // FInputModeUIOnly InputMode;
+        FInputModeGameAndUI InputMode;
         InputMode.SetWidgetToFocus(ChatInputWidget->TakeWidget());
         InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+
+        InputMode.SetHideCursorDuringCapture(false);
 
         PC->SetInputMode(InputMode);
     }
@@ -164,11 +200,94 @@ void AWalkieTalkieActor::HideChatInput()
     }
 }
 
-void AWalkieTalkieActor::OnChatTextSubmitted(const FString& Text)
+void AWalkieTalkieActor::SubmitChatText(const FString& Text)
 {
     HideChatInput();
 
-    UE_LOG(LogTemp, Log, TEXT("Chat text submitted: %s"), *Text);
+    // Print what the user typed to the screen in Cyan
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Cyan, FString::Printf(TEXT("You: %s"), *Text));
+    }
 
-    // API call or further processing here
+    FString MessageToSend = Text;
+
+    // State Machine Logic
+    if (Text.Equals(TEXT("Quiz Me."), ESearchCase::CaseSensitive))
+    {
+        CurrentChatState = EChatState::RequestedQuiz;
+        MessageToSend = TEXT("Ask me a single short quiz question about RNA or COVID-19 vaccines.");
+    }
+    else if (CurrentChatState == EChatState::WaitingForAnswer)
+    {
+        // Secretly package the question and the user's answer together so the AI has context
+        MessageToSend = FString::Printf(TEXT("You previously asked me this quiz question: '%s'. My answer is: '%s'. Is my answer correct? Please explain the right answer."), *LastQuizQuestion, *Text);
+        
+        // Reset the state back to normal
+        CurrentChatState = EChatState::Normal;
+    }
+    else
+    {
+        CurrentChatState = EChatState::Normal;
+    }
+
+    // Create the HTTP Request
+    FHttpRequestRef Request = FHttpModule::Get().CreateRequest();
+    Request->OnProcessRequestComplete().BindUObject(this, &AWalkieTalkieActor::OnChatAPIResponseReceived);
+    
+    Request->SetURL("http://127.0.0.1:8000/chat"); 
+    Request->SetVerb("POST");
+    Request->SetHeader("Content-Type", "application/json");
+
+    // Build the JSON Payload using MessageToSend
+    TSharedPtr<FJsonObject> JsonObject = MakeShared<FJsonObject>();
+    JsonObject->SetStringField("message", MessageToSend); 
+    JsonObject->SetNumberField("max_tokens", 256);
+    JsonObject->SetNumberField("temperature", 0.7);
+
+    // Serialize to string and send
+    FString OutputString;
+    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutputString);
+    FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
+    
+    Request->SetContentAsString(OutputString);
+    Request->ProcessRequest();
+}
+
+void AWalkieTalkieActor::OnChatAPIResponseReceived(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
+{
+    if (bWasSuccessful && Response.IsValid())
+    {
+        TSharedPtr<FJsonObject> JsonResponse;
+        TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Response->GetContentAsString());
+
+        if (FJsonSerializer::Deserialize(Reader, JsonResponse))
+        {
+            FString BotResponse = JsonResponse->GetStringField("response");
+            
+            // Check if this response is the quiz question we requested
+            if (CurrentChatState == EChatState::RequestedQuiz)
+            {
+                // Save the question to memory and change state!
+                LastQuizQuestion = BotResponse;
+                CurrentChatState = EChatState::WaitingForAnswer;
+            }
+
+            // Print the AI's response in Green
+            if (GEngine)
+            {
+                GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Green, FString::Printf(TEXT("Bot: %s"), *BotResponse));
+            }
+
+            ShowChatInput();
+        }
+    }
+    else
+    {
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Error: Could not connect to API."));
+        }
+        CurrentChatState = EChatState::Normal; // Reset on failure
+    }
 }
