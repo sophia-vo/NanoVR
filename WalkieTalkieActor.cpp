@@ -13,25 +13,24 @@ AWalkieTalkieActor::AWalkieTalkieActor()
 {
     PrimaryActorTick.bCanEverTick = false;
 
-    // Create and setup Static Mesh component
+    // Walkie Talkie Static Mesh Component
     WalkieTalkieMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WalkieTalkieMesh"));
     RootComponent = WalkieTalkieMesh;
 
-    // Create and configure Sphere Component as detection boundary
+    // Sphere Component as detection boundary
     DetectionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("DetectionSphere"));
     DetectionSphere->SetupAttachment(WalkieTalkieMesh);
     DetectionSphere->SetSphereRadius(300.f);  // Adjust radius as needed
     DetectionSphere->SetCollisionProfileName(TEXT("Trigger"));
     DetectionSphere->SetGenerateOverlapEvents(true);
 
-    // Create Widget Component for "Press E" prompt (3D Widget)
+    // Widget Component for "Press E" prompt (3D Widget)
     PressEPromptWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("PressEPromptWidget"));
     PressEPromptWidget->SetupAttachment(WalkieTalkieMesh);
     PressEPromptWidget->SetWidgetSpace(EWidgetSpace::World);
     PressEPromptWidget->SetDrawSize(FVector2D(150, 50));
-    PressEPromptWidget->SetRelativeLocation(FVector(0.f, 0.f, 150.f)); // above the walkie talkie mesh
-    PressEPromptWidget->SetVisibility(false); // Hidden initially
-
+    PressEPromptWidget->SetRelativeLocation(FVector(0.f, 0.f, 150.f)); 
+    PressEPromptWidget->SetVisibility(false); 
     bPlayerInRange = false;
 }
 
@@ -51,10 +50,10 @@ void AWalkieTalkieActor::OnDetectionBeginOverlap(UPrimitiveComponent* Overlapped
     {
         bPlayerInRange = true;
 
-        // Show the 3D Press E widget
+        // Show the 3D Press E widget when User crosses detection boundary
         PressEPromptWidget->SetVisibility(true);
 
-        // Enable input for player controller and bind E key
+        // Enable input for player controller and bind E key -> consider changing to non depreciated method
         APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
         if (PC)
         {
@@ -74,7 +73,7 @@ void AWalkieTalkieActor::OnDetectionEndOverlap(UPrimitiveComponent* OverlappedCo
     {
         bPlayerInRange = false;
 
-        // Hide the 3D widget
+        // Hide the 3D widget when User leaves detection boundary
         PressEPromptWidget->SetVisibility(false);
 
         APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0);
@@ -86,31 +85,6 @@ void AWalkieTalkieActor::OnDetectionEndOverlap(UPrimitiveComponent* OverlappedCo
         
     }
 }
-
-// void AWalkieTalkieActor::OnPressE()
-// {
-//     if (bPlayerInRange)
-//     {
-//         // Hide 3D widget prompt
-//         PressEPromptWidget->SetVisibility(false);
-
-//         ShowChatInput();
-        
-//         if (GEngine)
-//         {
-//             GEngine->AddOnScreenDebugMessage(
-//                 -1,                 // Key (-1 = new message every time)
-//                 5.f,                // Duration (seconds)
-//                 FColor::Green,      // Text color
-//                 TEXT("E pressed: Show chat input UI")
-//             );
-//         }
-
-//         // Show 2D chat input UI (widget on left screen) here via your UUserWidget class
-    
-//         UE_LOG(LogTemp, Log, TEXT("E pressed: Show chat input UI"));
-//     }
-// }
 
 void AWalkieTalkieActor::OnPressE()
 {
@@ -128,7 +102,7 @@ void AWalkieTalkieActor::OnPressE()
                 PressEPromptWidget->SetVisibility(true);
             }
 
-            // Optional: Reset the state machine in case they walked away mid-quiz
+            // Reset the state machine in case they walked away mid-quiz
             CurrentChatState = EChatState::Normal; 
         }
         else
@@ -145,7 +119,7 @@ void AWalkieTalkieActor::OnPressE()
 }
 
 
-// Text Box Handling --------------------------
+// Text Box Handling 
 
 void AWalkieTalkieActor::ShowChatInput()
 {
@@ -174,8 +148,7 @@ void AWalkieTalkieActor::ShowChatInput()
     if (APlayerController* PC = UGameplayStatics::GetPlayerController(this, 0))
     {
         PC->bShowMouseCursor = true;
-
-        // FInputModeUIOnly InputMode;
+        // Allow user to click out of textbox and Click E to close text box
         FInputModeGameAndUI InputMode;
         InputMode.SetWidgetToFocus(ChatInputWidget->TakeWidget());
         InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
@@ -204,7 +177,7 @@ void AWalkieTalkieActor::SubmitChatText(const FString& Text)
 {
     HideChatInput();
 
-    // Print what the user typed to the screen in Cyan
+    // Print what the user typed to the screen in Cyan (temporary check to ensure imputs are getting recieved)
     if (GEngine)
     {
         GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Cyan, FString::Printf(TEXT("You: %s"), *Text));
@@ -212,7 +185,7 @@ void AWalkieTalkieActor::SubmitChatText(const FString& Text)
 
     FString MessageToSend = Text;
 
-    // State Machine Logic
+    // State Machine Logic -> Consider changing to prompt what mode the User wants
     if (Text.Equals(TEXT("Quiz Me."), ESearchCase::CaseSensitive))
     {
         CurrentChatState = EChatState::RequestedQuiz;
@@ -220,7 +193,7 @@ void AWalkieTalkieActor::SubmitChatText(const FString& Text)
     }
     else if (CurrentChatState == EChatState::WaitingForAnswer)
     {
-        // Secretly package the question and the user's answer together so the AI has context
+        // Package the question and the user's answer together so the AI has context
         MessageToSend = FString::Printf(TEXT("You previously asked me this quiz question: '%s'. My answer is: '%s'. Is my answer correct? Please explain the right answer."), *LastQuizQuestion, *Text);
         
         // Reset the state back to normal
@@ -251,6 +224,10 @@ void AWalkieTalkieActor::SubmitChatText(const FString& Text)
     FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
     
     Request->SetContentAsString(OutputString);
+    
+    // ... Animation
+    OnStartWaitingForBot();
+    
     Request->ProcessRequest();
 }
 
@@ -265,19 +242,21 @@ void AWalkieTalkieActor::OnChatAPIResponseReceived(FHttpRequestPtr Request, FHtt
         {
             FString BotResponse = JsonResponse->GetStringField("response");
             
-            // Check if this response is the quiz question we requested
+            // Check if this response is the quiz question requested
             if (CurrentChatState == EChatState::RequestedQuiz)
             {
-                // Save the question to memory and change state!
+                // Save the question to memory and change state
                 LastQuizQuestion = BotResponse;
                 CurrentChatState = EChatState::WaitingForAnswer;
             }
 
-            // Print the AI's response in Green
+            // Print the AI's response in Green -> temporary checking if a response is recieved, will ouput to UI
             if (GEngine)
             {
                 GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Green, FString::Printf(TEXT("Bot: %s"), *BotResponse));
             }
+            // For ... animation
+            OnBotResponseReceived(BotResponse);
 
             ShowChatInput();
         }
@@ -287,6 +266,7 @@ void AWalkieTalkieActor::OnChatAPIResponseReceived(FHttpRequestPtr Request, FHtt
         if (GEngine)
         {
             GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, TEXT("Error: Could not connect to API."));
+            // ensure api server is running locally -> consider hosting with a cloud hosting provider?
         }
         CurrentChatState = EChatState::Normal; // Reset on failure
     }

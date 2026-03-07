@@ -31,21 +31,30 @@ class NANOTESTER3D_API AWalkieTalkieActor : public AActor
 public:
     AWalkieTalkieActor();
 
+    // Text Box for User Input
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UUserWidget> ChatInputWidgetClass;
+
+    // Unnecessary ... animation while waiting for response from server
+    UFUNCTION(BlueprintImplementableEvent, Category = "Walkie Talkie UI")
+    void OnStartWaitingForBot();
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "Walkie Talkie UI")
+    void OnBotResponseReceived(const FString& Response);
  
 protected:
     virtual void BeginPlay() override;
  
     // Components
+    // Walkie Talkie Static Mesh Component
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-   UStaticMeshComponent* WalkieTalkieMesh;
- 
-   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-   USphereComponent* DetectionSphere;
- 
-   UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-   UWidgetComponent* PressEPromptWidget;
+    UStaticMeshComponent* WalkieTalkieMesh;
+    // Detection Sphere Component
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    USphereComponent* DetectionSphere;
+    // Press E Prompt Widget
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UWidgetComponent* PressEPromptWidget;
  
     // Overlap Functions
     UFUNCTION()
@@ -63,13 +72,13 @@ protected:
     // State
     bool bPlayerInRange;
 
-    // User Widget Text Box --------------------------------
+    // User Widget Text Box
     
     UPROPERTY()
     UUserWidget* ChatInputWidget;
     
     void ShowChatInput();
-
+    // Expose Functions for Blueprint
     UFUNCTION(BlueprintCallable, Category = "Walkie Talkie")
     void HideChatInput();
 
